@@ -22,7 +22,7 @@ I used the order items, orders, sellers, and reviews tables from the [Olist Braz
 ├── analysis.qmd        # Queries, analysis, and forecasting
 ├── dashboard.qmd       # Dashboard layout and charts
 ├── styles.css          # Custom styling for the Methods page
-└── data/               # Saved results used by the dashboard
+└── rds/               # Saved results used by the dashboard
 
 ## Limitations and Next Steps
 
