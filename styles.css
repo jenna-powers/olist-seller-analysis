@@ -1,0 +1,18 @@
+.doc.card { 
+    border: none; 
+    box-shadow: none; 
+    background: transparent; 
+    flex: none !important; 
+    height: auto !important; 
+    font-size: 1.1rem;
+    line-height: 1.6;
+    min-height: 0;
+}
+.doc .card-header { 
+    background: transparent; 
+    border-bottom: none; 
+    font-size: 1.25rem; 
+    font-weight: 600; 
+    padding-bottom: 0; 
+}
+.doc .card-body { padding-top: 0.25rem; }

@@ -1,0 +1,28 @@
+
+```{r settings}
+
+library(scales)
+library(DBI)
+library(tidyverse)
+library(knitr)
+library(fable)
+library(tsibble)
+library(gt)
+
+theme_set(
+    theme_minimal(base_size = 14) + 
+    theme(
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        plot.caption = element_text(hjust = 0.5),
+        plot.margin = margin(
+            t = 5.5, 
+            r = 20, 
+            b = 5, 
+            l = 10
+        ),
+        strip.text = element_text(size = 11, margin = margin(t = 5, b = 10)),
+        strip.clip = 'off'
+        )
+    )
+```
