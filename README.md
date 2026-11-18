@@ -28,14 +28,14 @@ I used the order items, orders, sellers, and reviews tables from the [Olist Braz
 ## Limitations and Next Steps
 
 ### Limitations
-**Short History**: The data covers about 20 months, which limits how reliable the forecast is and means the models can’t learn yearly patterns like Black Friday.
-**How Top Sellers Are Defined**: Top sellers are identified using revenue across the full dataset, so the group was chosen with knowledge of how sellers performed over the entire period. This may make their historical trend look different than it would for a group defined in advance.
-**Associations, Not Causes**: The findings show how top sellers differ from the rest, but can’t show whether those differences cause their success.
+- **Short History**: The data covers about 20 months, which limits how reliable the forecast is and means the models can’t learn yearly patterns like Black Friday.
+- **How Top Sellers Are Defined**: Top sellers are identified using revenue across the full dataset, so the group was chosen with knowledge of how sellers performed over the entire period. This may make their historical trend look different than it would for a group defined in advance.
+- **Associations, Not Causes**: The findings show how top sellers differ from the rest, but can’t show whether those differences cause their success.
 
 ### Next Steps
-**Product Categories**: Check whether top sellers are concentrated in certain categories, which could explain their higher sales volume.
-**Predicting Future Top Sellers**: Build a model using sellers’ early activity to predict which new sellers will become top sellers.
-**A Fixed Seller Group**: Define top sellers using 2017 data only, then track how that group performs in 2018 for a cleaner forecast.
+- **Product Categories**: Check whether top sellers are concentrated in certain categories, which could explain their higher sales volume.
+- **Predicting Future Top Sellers**: Build a model using sellers’ early activity to predict which new sellers will become top sellers.
+- **A Fixed Seller Group**: Define top sellers using 2017 data only, then track how that group performs in 2018 for a cleaner forecast.
 
 ## Contact
 **Jenna Powers**
