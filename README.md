@@ -15,14 +15,15 @@ I tested whether reviews, delivery speed, or location explained the difference. 
 
 ## Data
 I used the order items, orders, sellers, and reviews tables from the [Olist Brazilian E-Commerce Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce/data), which contains orders made on Olist’s marketplace from 2016 to 2018. The raw data isn't included in the repo due to its size, but it can be downloaded from the above link. 
-
 ## Repository Structure
+```
 ├── _setup.qmd          # Packages and plot theme
 ├── build_database.qmd  # Builds the database
 ├── analysis.qmd        # Queries, analysis, and forecasting
 ├── dashboard.qmd       # Dashboard layout and charts
 ├── styles.css          # Custom styling for the Methods page
 └── rds/               # Saved results used by the dashboard
+```
 
 ## Limitations and Next Steps
 
