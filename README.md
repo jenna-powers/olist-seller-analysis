@@ -1,8 +1,6 @@
 # What Separates Top Sellers from the Rest?
 An analysis of Olist’s Brazilian e-commerce marketplace using SQL and R, presented as a Quarto dashboard.
-<a href="[http://localhost:7562/Olist-Customer-Analysis.html#analysis]">
-  <img src="Images/dashboard_screenshot.png" width="700" alt="Dashboard Screenshot">
-</a>
+[Dashboard Link](https://jenna-powers-olist-seller-analysis.share.connect.posit.cloud/)
 
 ## Key Findings
 - The top 20% of sellers generate 82.7% of revenue.
@@ -11,7 +9,7 @@ An analysis of Olist’s Brazilian e-commerce marketplace using SQL and R, prese
 - Bottom 80% revenue is growing steadily, while top-seller revenue has stalled since early 2018.
 
 ## Approach
-I tested whether reviews, delivery speed, or location explained the difference. None did. Instead, top sellers stand out mainly on volume: they sell far more items at similar prices. I also forecast revenue for each group over the next six months, choosing models by cross-validation. [Methods](http://localhost:7562/Olist-Customer-Analysis.html#methods)
+I tested whether reviews, delivery speed, or location explained the difference. None did. Instead, top sellers stand out mainly on volume: they sell far more items at similar prices. I also forecast revenue for each group over the next six months, choosing models by cross-validation. [Methods](https://jenna-powers-olist-seller-analysis.share.connect.posit.cloud/)
 
 ## Data
 I used the order items, orders, sellers, and reviews tables from the [Olist Brazilian E-Commerce Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce/data), which contains orders made on Olist’s marketplace from 2016 to 2018. The raw data isn't included in the repo due to its size, but it can be downloaded from the above link. 
