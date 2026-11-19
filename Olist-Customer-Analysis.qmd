@@ -1,0 +1,400 @@
+---
+title: "What Separates Top Sellers From the Rest?"
+subtitle: "Using the Brazilian E-Commerce Public Dataset by Olist"
+author: Jenna Powers
+format: 
+    dashboard:
+        orientation: rows
+        css: styles.css
+        theme:
+            flatly
+---
+{{< include _setup.qmd >}}
+# Analysis
+
+## Row {.flow}
+
+```{r seller_revenue}
+#| fig-width: 8
+#| fig-height: 4.5
+sellers_revenue <- readRDS("rds/sellers_revenue.rds")
+rev_20 <- sellers_revenue |>
+    filter(cum_sellers == 0.2) |>
+    pull(cum_revenue) 
+
+
+
+
+sellers_revenue |>
+    ggplot(
+        aes(
+            x = cum_sellers,
+            y = cum_revenue
+        )
+    ) +
+    geom_line(color = '#00BFC4', linewidth = 2) +
+    annotate(
+        'point',
+        x = 0.2,
+        y = rev_20,
+        size = 4
+    ) +
+    annotate(
+        'segment', 
+        x = 0.2,
+        y = rev_20,
+        xend = 0,
+        yend = rev_20,
+        linetype = 'dashed',
+        linewidth = 1.5
+    ) +
+    annotate(
+        'segment', 
+        x = 0.2,
+        y = rev_20,
+        xend = 0.2,
+        yend = 0,
+        linetype = 'dashed',
+        linewidth = 1.5
+    ) +
+    scale_y_continuous(labels = label_percent()) +
+    scale_x_continuous(labels = label_percent()) +
+    labs(
+        title = 'Cumulative Share of Revenue Per Seller',
+        x = 'Cumulative Share of Sellers',
+        y = 'Cumulative Share of Revenue',
+        subtitle = paste0('Top 20% of Sellers generate ', label_percent(accuracy = 0.1)(rev_20), ' of Revenue.')
+    ) +
+    theme(plot.subtitle = element_text(hjust = 0.5))
+
+```
+
+
+```{r freight}
+#| fig-width: 6
+#| fig-height: 5
+d_seller_summary <- readRDS("rds/seller_freight.rds")
+
+d_seller_summary |>
+    ggplot(
+        aes(
+            x = delivery_days,
+            y = top_seller,
+            fill = top_seller
+        )
+    ) +
+    geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
+    coord_flip(xlim = c(0,25)) +
+    labs(
+        title = 'Top Sellers Aren’t Faster to Deliver',
+        y = 'Seller',
+        x = 'Average Delivery Days'
+    )
+d_tbl <- d_seller_summary |>
+        summarise(
+            mean_days = mean(delivery_days, na.rm = TRUE),
+            sd_days = sd(delivery_days, na.rm = TRUE),
+            se = sd_days / sqrt(n()),
+            n = n(),
+            .by = top_seller
+        )
+
+
+
+```
+
+```{r reviews}
+#| fig-width: 6
+#| fig-height: 5
+filter_seller_summary <- readRDS("rds/seller_rvw.rds")
+
+
+filter_seller_summary |>
+    ggplot(
+        aes(
+            x = avg_rvw,
+            y = top_seller,
+            fill = top_seller
+        )
+    ) +
+    geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
+    coord_flip() +
+    labs(
+        title = 'Reviews Are Nearly Identical Between Groups',
+        y = 'Seller',
+        x = 'Average Review'
+    )
+
+    tbl <- filter_seller_summary |>
+        summarise(
+            mean_rvw = mean(avg_rvw, na.rm = TRUE),
+            sd_rvw = sd(avg_rvw, na.rm = TRUE),
+            n = n(),
+            .by = top_seller
+        )
+
+
+
+```
+
+## Row
+
+```{r state_revenue}
+#| fig-width: 7
+#| fig-height: 3.5
+sellers <- readRDS("rds/seller_state.rds")
+sellers |>
+    ggplot(
+        aes(
+            x = '',
+            y = total_sellers,
+            fill = state
+        )
+    ) +
+    geom_bar(stat = 'identity', width = 1, position = 'fill') +  
+    geom_text(
+        aes(
+            label = paste0(
+                state, 
+                "\n", 
+                label_percent(accuracy = 1)(share)
+                )
+            ), 
+            position = position_fill(vjust = 0.5), 
+            color = "white", 
+            size = 5
+        ) + 
+    coord_polar(theta = 'y') +
+    theme_void() +
+    theme(
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        plot.margin = margin(
+            t = 5.5, 
+            r = 20, 
+            b = 5.5, 
+            l = 10
+        ),
+        strip.text = element_text(size = 11, margin = margin(t = 5, b = 5)),
+        strip.clip = 'off',
+        aspect.ratio = 1,
+        legend.position = 'none'
+        ) +
+        facet_wrap(~top_seller) +
+    labs(
+        title = "SP’s Share of Top Sellers Matches Its Share of All Sellers",
+        fill = 'State')
+
+
+```
+
+
+### Column 
+
+#### Row
+```{r med_box}
+#| content: valuebox
+#| title: 'Median Items Sold: Top 20%'
+med <- readRDS('rds/median.rds')
+list(
+    icon = 'bag-dash',
+    color = '#00BFC4',
+    value = med$med_top
+)
+```
+
+```{r b_med_box}
+#| content: valuebox
+#| title: 'Median Items Sold: Bottom 80%'
+
+list(
+    icon = 'bag-dash',
+    color = '#F8766D',
+    value = med$med_bot
+)
+```
+
+
+#### Row
+```{r volume_price}
+#| fig-width: 6
+#| fig-height: 4
+seller_summary <- readRDS("rds/seller_summary.rds")
+
+cutoff <- seller_summary |> filter(top_seller == 'Top 20%') |> pull(revenue) |> min()
+seller_summary |>
+    ggplot(
+        aes(
+            x = n_items,
+            y = avg_price,
+            color = top_seller
+        )
+    ) + 
+    geom_point(alpha = 0.3, size = 1) + 
+    scale_x_log10() +
+    scale_y_log10(        
+        labels = label_currency(
+            prefix = 'R$',
+            scale_cut = cut_short_scale(),
+            accuracy = 1
+    )) +
+    geom_jitter(width = 0.1, height = 0) +
+    geom_abline(slope = -1, intercept = log10(cutoff), linetype = 'dashed', linewidth = 1.5) +
+    labs(
+        title = 'Top Sellers Win on Volume, Not Price' ,
+        x = 'Items Sold',
+        y = 'Average Price',
+        color = 'Seller Group'
+    )
+
+
+```
+
+### Column 
+
+```{r plot}
+#| fig-width: 8
+#| fig-height: 4.5
+fc <- readRDS('rds/forecast.rds')
+filtered_revenue <- readRDS('rds/filtered_revenue.rds')
+ggplot() + 
+geom_ribbon(data = fc, aes(
+    x = order_date,
+    ymin = lwr,
+    ymax = upr,
+    fill = top_seller
+    ),
+    alpha = 0.2,
+    show.legend = FALSE
+) +
+geom_line(
+    data = filtered_revenue, 
+    aes(
+        x = order_date,
+        y = revenue,
+        color = top_seller
+        ),
+        linewidth = 1
+    ) +
+geom_line(data = fc, 
+    aes(
+        x = order_date,
+        y = fit,
+        color = top_seller
+    ),
+    linetype = 'dashed',
+    linewidth = 1
+) +
+scale_x_date(date_labels = "%b %Y") +
+geom_vline(
+    xintercept = ymd('2018-08-01'),
+    linetype = 'dotted'
+    ) +
+scale_y_continuous(labels = label_currency(prefix = 'R$', scale_cut = cut_short_scale())) +
+labs(
+    title = 'Top Sellers Stall as the Rest Keep Growing',
+    subtitle = 'Monthly Revenue, Jan 2017 to Aug 2018, with a 6-month Forecast',
+    x = 'Date',
+    y = 'Revenue',
+    color = 'Seller Group',
+    caption = 'Forecast: naive model for the top 20% and linear trend for the bottom 80%, each chosen for the \nlowest MAPE in time series cross-validation. November 2017 Black Friday spike smoothed for \nmodeling. Shaded areas show 80% prediction intervals.'
+)
+
+```
+
+# Methods {orientation='columns'}
+
+## Column {.flow}
+
+::: {.card .doc expandable="false"}
+
+### Overview
+What separates top sellers from the rest? I tested whether reviews, delivery speed, or location explained the difference. None did. Instead, top sellers stand out mainly on volume: they sell far more items at similar prices. I also forecast revenue for each group over the next six months.
+
+### Data
+I used the order items, orders, sellers, and reviews tables from the [Olist Brazilian E-Commerce Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce/data), which contains orders made on Olist’s marketplace from 2016 to 2018.
+
+### Definitions 
+- **Revenue**: Sum of item prices excluding freight.
+- **Top 20%**: Sellers in the top 20% by total revenue across the full dataset, 2016 to 2018.
+- **Delivery days**: Days from purchase to delivery.
+- **Average review**: Each seller's average review score, with each order counted once.
+
+### Limitations
+- I had about 20 months of data.
+- The top seller groups are defined using the full dataset.
+- These findings show associations, not causation.
+
+:::
+
+
+
+
+## Column {.flow}
+
+::: {.card .doc expandable="false"}
+### Data Preparation and Filters
+- Each order is counted once per seller when averaging reviews and delivery times.
+- Undelivered orders are excluded from delivery analysis.
+- Sellers with fewer than 10 deliveries are removed from the delivery comparison, and sellers with fewer than 10 reviews are excluded from the review comparison to avoid noise from small samples. 
+
+
+### Comparing Top 20% to Bottom 80%
+- **Reviews**: Nearly identical (4.10 vs. 4.12 stars, sellers with 10+ reviews).
+- **Delivery Speed**: Top sellers deliver about one day slower (12.8 vs. 11.6 days).
+- **Location**: SP has about 60% of both top sellers and all sellers.
+- **Volume vs. Price**: Top sellers’ median is 72 items sold vs. 5 for the rest.
+
+
+### Tools
+- Quarto
+- SQL (SQLite)
+- R 
+    - fable
+    - tidyverse
+- GitHub Repository: [olist-seller-analysis](https://github.com/jenna-powers/olist-seller-analysis)
+
+:::
+## Column {.flow}
+
+::: {.card .doc expandable="false"}
+### Forecasting Method
+- Monthly revenue by group, January 2017 to August 2018 (incomplete months excluded).
+- November 2017 Black Friday spike replaced with the October and December average for modeling. Since only one Black Friday is in the data, the models can’t learn it as a yearly pattern.
+- Models compared: ETS, ARIMA, naive, and linear trend.
+- Selection: time series cross-validation (12-month starting window, 3-month-ahead forecasts), compared by MAPE.
+- Final models: linear model for bottom 80%, naive for top 20%. Chosen based on minimum MAPE. 
+- Top 20% modeled on the log scale; the line shows the median forecast.
+- 80% prediction intervals used.
+
+
+
+```{r cross_val}
+cross_v <- readRDS('rds/cross_validation.rds')
+cross_v |>
+    gt() |>
+    tab_header(
+        title = 'Cross-Validation Results',
+        subtitle = 'Mean Absolute Percentage Error (MAPE), 3-Month Forecast'
+    ) |>
+    fmt_number(columns = -Model, decimals = 1, pattern = "{x}%") |>
+    tab_style(
+        style = cell_text(weight = "bold"), 
+        locations = cells_body(
+            columns = `Top 20%`, 
+            rows = `Top 20%` == min(`Top 20%`)
+        )
+    ) |>
+    tab_style(
+        style = cell_text(weight = "bold"), 
+        locations = cells_body(
+            columns = `Bottom 80%`, 
+            rows = `Bottom 80%` == min(`Bottom 80%`)
+        )
+    ) |>
+    tab_source_note(
+        "Lower MAPE is better. Bold values mark the lowest error for each group."
+    )
+```
+
+:::
