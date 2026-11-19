@@ -1,6 +1,6 @@
 # What Separates Top Sellers from the Rest?
 An analysis of Olist’s Brazilian e-commerce marketplace using SQL and R, presented as a Quarto dashboard.
-[Dashboard Link](https://jenna-powers-olist-seller-analysis.share.connect.posit.cloud/)
+[View the Live Dashboard](https://jenna-powers-olist-seller-analysis.share.connect.posit.cloud/)
 
 ## Key Findings
 - The top 20% of sellers generate 82.7% of revenue.
