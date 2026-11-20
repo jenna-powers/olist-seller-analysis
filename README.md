@@ -5,7 +5,7 @@ An analysis of Olist’s Brazilian e-commerce marketplace using SQL and R, prese
 ## Key Findings
 - The top 20% of sellers generate 82.7% of revenue.
 - Reviews, delivery speed, and location don’t explain the gap: ratings are nearly identical (4.10 vs. 4.12), and top sellers deliver about a day slower.
-- Top sellers win on volume, not price: a median of 72 items sold vs. 5.
+- Top sellers win mainly on volume. They sell about 14 times as many items, at prices only modestly higher.
 - Bottom 80% revenue is growing steadily, while top-seller revenue has stalled since early 2018.
 
 ## Approach
