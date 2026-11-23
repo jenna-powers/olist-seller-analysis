@@ -1,0 +1,243 @@
+---
+title: "Creating Database"
+---
+
+# Installs
+
+```{r import}
+#install.packages("DBI")
+#install.packages("RSQLite")
+
+library(DBI)
+library(RSQLite)
+library(tidyverse)
+```
+
+# Create Database
+```{r make_database}
+con <- dbConnect(
+    SQLite(),
+    "olist.db"
+    )
+```
+
+# Adding tables to the Database
+```{r add_tables}
+#Reading in datasets
+location <- read_csv("data/olist_geolocation_dataset.csv")
+order_items <- read_csv("data/olist_order_items_dataset.csv")
+order_payments <- read_csv("data/olist_order_payments_dataset.csv")
+order_reviews <- read_csv("data/olist_order_reviews_dataset.csv")
+orders <- read_csv("data/olist_orders_dataset.csv")
+products <- read_csv("data/olist_products_dataset.csv")
+customers <- read_csv("data/olist_customers_dataset.csv")
+sellers <- read_csv("data/olist_sellers_dataset.csv")
+
+#writing datasets to olist.db
+dbWriteTable(con, "location", location)
+dbWriteTable(con, "order_items", order_items)
+dbWriteTable(con, "order_payments", order_payments)
+dbWriteTable(con, "order_reviews", order_reviews)
+dbWriteTable(con, "orders", orders)
+dbWriteTable(con, "products", products)
+dbWriteTable(con, "customers", customers)
+dbWriteTable(con, "sellers", sellers)
+```
+
+
+Looking to see if there are any duplicate seller IDs. There are not. 
+```{r clean}
+duplicate_sellers <- dbGetQuery(con, "
+    SELECT
+        seller_id,
+        COUNT(*) AS record_count
+    FROM sellers
+    GROUP BY seller_id
+    HAVING COUNT(*) > 1
+")
+
+duplicate_sellers
+```
+
+
+Seller Revenue
+```{r seller_revenue}
+#A window function computes a value using data from multiple rows related to the current row, but unlike aggregate functions, it does not group rows into a single output. Instead, each row retains its identity. 
+# In this case, we use window functions to get the cumulative total and the row index
+# Multiplying by 1.0 forces decimal division. 
+
+sellers_revenue <- dbGetQuery(con, "
+    WITH sellers_grp AS(
+        SELECT 
+            SUM(price) AS revenue,
+            oi.seller_id AS seller_id,
+            seller_state AS seller_state
+        FROM order_items AS oi LEFT JOIN sellers AS s
+        ON oi.seller_id = s.seller_id
+        GROUP BY oi.seller_id
+    ), 
+    cum_grp AS (
+        SELECT 
+            revenue,
+            seller_id,
+            1.0 * ROW_NUMBER() OVER (ORDER BY revenue DESC) / COUNT(*) OVER() as cum_sellers,
+            1.0 * SUM(revenue) OVER (ORDER BY revenue DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) / SUM(revenue) OVER() AS cum_revenue,
+            seller_state   
+        FROM sellers_grp
+    )
+    SELECT 
+        revenue,
+        seller_id,
+        cum_sellers,
+        cum_revenue,
+        CASE WHEN cum_sellers <= 0.2 THEN 'Top 20%' ELSE 'Bottom 80%' END AS top_seller,
+        seller_state
+        FROM cum_grp
+")
+
+saveRDS(sellers_revenue, "rds/sellers_revenue.rds")
+dbWriteTable(con, "sellers_revenue", sellers_revenue, overwrite = TRUE)
+```
+
+Seller Revenue grouped by State
+
+```{r state_revenue}
+
+state_revenue <- dbGetQuery(con, "
+    WITH ranked_states AS (
+        SELECT 
+            s.seller_state,
+            sum(oi.price) AS total_revenue,
+            ROW_NUMBER() OVER (ORDER BY COUNT(DISTINCT oi.seller_id) ASC, seller_state ASC) AS state_seller_rank,
+            ROW_NUMBER() OVER (ORDER BY sum(oi.price) ASC) AS state_rank
+        FROM order_items AS oi
+        LEFT JOIN sellers AS s
+            ON oi.seller_id = s.seller_id
+        GROUP BY 
+            s.seller_state
+    )
+
+    SELECT 
+        SUM(sr.revenue) AS total_revenue,
+        top_seller,
+        state_rank,
+        state_seller_rank,
+        COUNT(*) AS total_sellers,
+        CASE WHEN rs.state_seller_rank <= 10 THEN 'Bottom 10' ELSE sr.seller_state END AS seller_state_b
+        FROM sellers_revenue AS sr LEFT JOIN ranked_states AS rs
+        ON sr.seller_state = rs.seller_state
+        GROUP BY seller_state_b, top_seller
+
+")
+
+saveRDS(state_revenue, "rds/state_revenue.rds")
+
+```
+
+Group by sellers, get freight data
+```{r freight} 
+freight <- dbGetQuery(con, "
+    WITH freight_data AS(
+        SELECT
+            order_id,
+            1.0 * (order_delivered_customer_date - order_purchase_timestamp) / 86400 AS delivery_days,
+            1.0 * (order_estimated_delivery_date - order_purchase_timestamp) / 86400 AS est_delivery_days
+        FROM orders
+    ),
+    frght_grp AS(
+        SELECT 
+            AVG(delivery_days) AS delivery_days,
+            AVG(est_delivery_days) AS est_delivery_days,
+            seller_id,
+            oi.order_id
+        FROM order_items AS oi LEFT JOIN freight_data AS fd
+        ON fd.order_id = oi.order_id
+        GROUP BY fd.order_id, seller_id
+    )
+    SELECT
+        AVG(delivery_days) AS delivery_days,
+        count(delivery_days) AS n_deliveries,
+        AVG(est_delivery_days) AS est_delivery_days,
+        seller_id
+    FROM frght_grp
+    GROUP BY seller_id
+")
+
+```
+
+Getting the reviews
+```{r reviews}
+reviews <- dbGetQuery(con,"
+    WITH rvw_grp AS(
+        SELECT 
+            AVG(review_score) AS review, 
+            seller_id,
+            oi.order_id
+        FROM order_items AS oi LEFT JOIN order_reviews AS o
+        ON o.order_id = oi.order_id
+        GROUP BY oi.order_id, oi.seller_id
+    )
+    SELECT
+        AVG(review) AS avg_rvw,
+        COUNT(review) AS n_rvw,
+        seller_id
+    FROM rvw_grp
+    GROUP BY seller_id
+
+")
+```
+
+Looking at order_items by seller
+```{r order_items}
+order_items <- dbGetQuery(con, "
+    SELECT 
+        COUNT(DISTINCT order_id) AS n_orders,
+        COUNT(*) AS n_items,
+        AVG(price) AS avg_price,
+        seller_id
+    FROM order_items
+    GROUP BY seller_id
+")
+```
+
+Combining into one dataset
+```{r freight_rvw}
+seller_summary <- sellers_revenue |>
+left_join(freight, by = 'seller_id') |>
+left_join(reviews, by = 'seller_id') |>
+left_join(order_items, by = 'seller_id')
+
+saveRDS(seller_summary, "rds/seller_summary.rds")
+
+nrow(seller_summary)
+nrow(sellers_revenue)
+```
+
+Monthly revenue by seller group
+```{r revenue}
+revenue <- dbGetQuery(con, "
+    SELECT
+        strftime('%Y-%m', order_purchase_timestamp, 'unixepoch') AS order_date,
+        SUM(oi.price) AS revenue,
+        top_seller
+    FROM order_items AS oi LEFT JOIN orders AS o ON oi.order_id = o.order_id
+    LEFT JOIN sellers_revenue as sr ON oi.seller_id = sr.seller_id
+    GROUP BY order_date, top_seller
+")
+
+saveRDS(revenue, "rds/revenue.rds")
+
+num_orders <- dbGetQuery(con, "
+    SELECT strftime('%Y-%m', order_purchase_timestamp, 'unixepoch') AS month, COUNT(DISTINCT order_id) AS n_orders 
+    FROM orders 
+    GROUP BY month 
+    ORDER BY month
+")
+
+saveRDS(num_orders, "rds/num_orders.rds")
+```
+
+```{r clean2}
+dbDisconnect(con)
+
+```

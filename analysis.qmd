@@ -1,0 +1,303 @@
+---
+title: "Analysis"
+---
+
+{{< include _setup.qmd >}}
+
+# Seller Revenue by State
+
+```{r state_revenue}
+state_revenue <- readRDS("rds/state_revenue.rds")
+
+sellers <- state_revenue|>
+    mutate(
+        state = if_else(seller_state_b == 'SP', 'SP', 'Other')
+        ) 
+        
+a_sellers <- sellers |>
+        summarise(
+        total_sellers = sum(total_sellers),
+        .by = state
+    ) |>
+    mutate(top_seller = 'All Sellers')
+
+t_sellers <- sellers |>
+    filter(top_seller == 'Top 20%') |>
+    summarise(
+        total_sellers = sum(total_sellers),
+        .by = c(state, top_seller)
+    )
+sellers <- bind_rows(a_sellers, t_sellers)
+sellers <- sellers |>
+    mutate(
+        share = total_sellers / sum(total_sellers),
+        .by = top_seller
+    ) 
+
+saveRDS(sellers, "rds/seller_state.rds")
+
+```
+
+# Top Seller Reviews
+
+```{r reviews}
+seller_summary <- readRDS("rds/seller_summary.rds")
+
+filter_seller_summary <- seller_summary |>
+    mutate(top_seller = if_else(cum_sellers <= 0.2, 'Top 20%', 'Bottom 80%')) |> 
+    filter(n_rvw >= 10) 
+saveRDS(filter_seller_summary, "rds/seller_rvw.rds")
+
+```
+
+# Top Seller Shipping Delays
+
+```{r freight}
+seller_summary <- readRDS("rds/seller_summary.rds")
+
+d_seller_summary <- seller_summary |> 
+    filter(!is.na(delivery_days), n_deliveries >= 10) 
+
+saveRDS(d_seller_summary, 'rds/seller_freight.rds')
+
+```
+
+```{r freight_pred}
+d <- d_seller_summary |>
+    mutate(
+        round_delivery = round(delivery_days, 0),
+        round_est = round(est_delivery_days, 0),
+        est_status = case_when(
+        round_est > round_delivery ~ 'Early',
+        round_est == round_delivery ~ 'On Time',
+        round_est < round_delivery ~ 'Late'
+    ))
+table(d$est_status)
+glimpse(d)
+
+```
+
+# Median Items Sold
+
+```{r med}
+t <- seller_summary |>
+    summarise(
+        med_items = median(n_items),
+        med_price = round(median(avg_price,2),2),
+        count = n(),
+        .by = top_seller
+    )
+#Add ratio boxes , a num sellers box, and a 20% revenue
+items_ratio <- round(t[1,2] / t[2,2], 1)
+price_ratio <- round(t[1,3] / t[2,3], 1)
+count <- t[1,4] + t[2,4] #Total sellers
+rev_20 <- sellers_revenue |>
+    filter(cum_sellers == 0.2) |>
+    pull(cum_revenue) 
+
+saveRDS(
+    list(
+        items_ratio = items_ratio,
+        price_ratio = price_ratio, 
+        count = count,
+        rev_20 = label_percent(accuracy = 0.1)(rev_20)
+    ),
+    'rds/value_boxes.rds'
+)
+
+
+```
+
+# Num Orders
+
+```{r trim}
+num_orders <- readRDS("rds/num_orders.rds")
+
+num_orders <- num_orders |>
+    mutate(month = ym(month))
+
+num_orders |>
+    ggplot(
+        aes(
+            x = month,
+            y = n_orders
+        )
+    ) +
+    geom_line(linewidth = 1.5, color = 'steelblue') +
+    labs(
+        title = 'Orders per Month',
+        x = 'Date',
+        y = 'Number of Orders'
+    )
+    num_orders
+
+```
+
+# Filtering Revenue
+
+```{r filter}
+revenue <- readRDS("rds/revenue.rds")
+filtered_revenue <- revenue |>
+    mutate(order_date = yearmonth(order_date)) |>
+    filter(between(order_date, yearmonth('2017 January'), yearmonth('2018 August'))) 
+f_revenue <- filtered_revenue|>
+    mutate(order_date = as.Date(order_date))
+saveRDS(f_revenue, 'rds/filtered_revenue.rds')
+```
+
+# Validation
+
+```{r new_model}
+# Filtering out the Black Friday spikes
+avg_nov <- filtered_revenue |>
+    as_tibble() |>
+    filter(order_date %in% c(yearmonth('2017 October'), yearmonth('2017 December'))) |>
+    summarise(
+        mean_revenue = mean(revenue),
+        .by = top_seller
+    )
+
+avg_r <- filtered_revenue |>
+    as_tibble() |>
+    left_join(avg_nov, by = 'top_seller') |>
+    mutate(revenue = if_else(order_date == yearmonth('2017 November'), mean_revenue, revenue)) |>
+    select(-mean_revenue)
+
+avg_r <- avg_r |>
+    as_tsibble(index = order_date, key = top_seller) 
+
+#Filter out last 3 months for testing
+filtered_r <- avg_r |>
+    filter(order_date <= yearmonth('2018 May'))
+
+#Fit several models at once
+fit <- filtered_r |>
+    model(
+        ets = ETS(revenue), #Exponential Smoothing
+        arima = ARIMA(revenue), #Autoregressive Integrated Moving Average
+        naive = NAIVE(revenue), #Naive- assumes no systemic change. Is a benchmark
+        lm = TSLM(revenue ~ trend()) #Linear regression model
+    )
+
+#MAPE = Mean Absolute Percent Error
+fit |> forecast(h = 3) |>
+    accuracy(avg_r) |>
+    arrange(top_seller, MAPE)
+
+```
+
+# Cross Validation
+
+```{r cross_validate}
+cv_data <- avg_r |> stretch_tsibble(.init = 12, .step = 1) |>
+    filter(.id < max(.id)) |>
+    filter(.id < max(.id)) |>
+    filter(.id < max(.id)) 
+
+fit_c <- cv_data |>
+    model(
+        ets = ETS(revenue), #Exponential Smoothing
+        arima = ARIMA(revenue), #Autoregressive Integrated Moving Average
+        naive = NAIVE(revenue), #Naive- assumes no systemic change. Is a benchmark
+        lm = TSLM(revenue ~ trend()) #Linear regression model
+    )
+
+cross_validation <- fit_c |> forecast(h = 3) |>
+    accuracy(avg_r) |>
+    arrange(top_seller, MAPE)
+
+cross_validation <- cross_validation |>
+    select(.model, top_seller, MAPE) |>
+    mutate(
+        .model = case_match(
+            .model,
+            'ets' ~ 'ETS',
+            'arima' ~ 'ARIMA',
+            'naive' ~ 'Naive',
+            'lm' ~ 'Linear Trend'
+        )
+    ) |>
+    rename(Model = .model) |>
+    pivot_wider(names_from = top_seller, values_from = MAPE)
+
+cross_validation
+saveRDS(cross_validation, 'rds/cross_validation.rds')
+#The final forecast goes 6 months out. We test 3 months out, and drop the last 3 rounds instead of the last one, since those rounds don't have 3 months of actual data to compare against. We don't have that many months (20), so going up to 6 months would leave very few rounds. Hence, we test 3 rounds.
+
+```
+
+# Forecast
+
+```{r forecast_0}
+
+
+last_top <- revenue |>
+    filter(top_seller == 'Top 20%') |>
+    slice_max(
+        order_by = order_date,
+        n = 1
+    ) |>
+    mutate(
+        order_date = order_date, 
+        top_seller = top_seller, 
+        fit = revenue, 
+        lwr = revenue, 
+        upr = revenue, 
+        .keep = 'none'
+    )
+
+last_bot <- revenue |>
+    filter(top_seller == 'Bottom 80%') |>
+    slice_max(
+        order_by = order_date,
+        n = 1
+    ) |>
+    mutate(
+        order_date = order_date, 
+        top_seller = top_seller, 
+        fit = revenue, 
+        lwr = revenue, 
+        upr = revenue, 
+        .keep = 'none'
+    )
+#Using 2 different models for the different groups
+fit_final <- avg_r |>
+    model(
+        lm = TSLM(revenue ~ trend()), #Linear regression model
+        naive = NAIVE(log(revenue))
+    )
+
+forecast <- fit_final |> 
+    forecast(h = 6) |>
+    filter(
+        (.model == "naive" & top_seller == "Top 20%") | 
+        (.model == "lm" & top_seller == "Bottom 80%")
+        )
+forecast
+fc <- forecast |>
+    mutate(median = median(revenue)) |>
+    hilo(level = 80) |>
+    unpack_hilo('80%') |>
+    as_tibble() |>
+    select(fit = median, lwr = `80%_lower`, upr = `80%_upper`, order_date, top_seller) |>
+    mutate(order_date = as.Date(order_date))
+
+filtered_revenue <- filtered_revenue |>
+    as.tibble() |>
+    mutate(order_date = as.Date(yearmonth(order_date)))
+
+last_rows <- filtered_revenue |>
+    filter(order_date == max(order_date), .by = top_seller) |>
+    mutate(
+        order_date = order_date, 
+        top_seller = top_seller, 
+        fit = revenue, 
+        lwr = revenue, 
+        upr = revenue, 
+        .keep = 'none'
+    )
+
+fc <- bind_rows(fc, last_rows)
+
+saveRDS(fc, 'rds/forecast.rds')
+```
