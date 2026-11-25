@@ -31,3 +31,7 @@
 .bslib-value-box .value-box-title { font-size: 0.9rem; }
 .bslib-value-box .value-box-showcase .bi { font-size: 2rem; }
 .bslib-value-box .value-box-area { padding: 0.5rem 1rem; }
+
+body {
+  overflow-x: auto;
+}
