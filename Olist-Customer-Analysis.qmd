@@ -195,7 +195,7 @@ box <- d_seller_summary |>
     ) +
     geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
     labs(
-        title = 'Top Sellers Aren’t Faster to Deliver',
+        title = str_wrap('Top Sellers Aren’t Faster to Deliver',40),
         x = 'Seller',
         y = 'Average Delivery Days'
     )
@@ -220,7 +220,7 @@ rvw <- filter_seller_summary |>
     ) +
     geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
     labs(
-        title = 'Reviews Are Nearly Identical Between Groups',
+        title = str_wrap('Reviews Are Nearly Identical Between Groups',40),
         x = 'Seller',
         y = 'Average Review'
     )
@@ -368,7 +368,8 @@ for (i in seq_along(p$x$data)) {
   if (!is_ribbon) seen <- c(seen, nm)
 }
 
-p |> 
+p |>
+layout(legend = list(orientation = "h", x = 0.5, xanchor = "center", y = -0.2)) |>
 config(displayModeBar = FALSE)
 
 ```
