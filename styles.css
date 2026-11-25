@@ -35,3 +35,7 @@
 body {
   overflow-x: auto;
 }
+
+#quarto-dashboard {
+  min-width: 1200px;
+}
