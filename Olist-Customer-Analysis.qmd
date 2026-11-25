@@ -3,6 +3,7 @@ title: "What Separates Top Sellers From The Rest?"
 format: 
     dashboard:
         orientation: rows
+        scrolling: true
         css: styles.css
         theme:
             flatly
