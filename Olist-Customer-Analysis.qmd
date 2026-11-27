@@ -177,7 +177,7 @@ layout(legend = list(
     orientation = "h", 
     x = 0.5, 
     xanchor = "center", 
-    y = -0.2,
+    y = -0.3,
     title = list(text = ""))
     ) |>
 config(displayModeBar = FALSE)
@@ -379,7 +379,7 @@ layout(legend = list(
     orientation = "h", 
     x = 0.5, 
     xanchor = "center", 
-    y = -0.2,
+    y = -0.3,
     title = list(text = "")),
     margin = list(t = 110), #Increasing margin so we have space for the subtitle
     title = list(text = paste0("Top Sellers Stall as the Rest Keep Growing", "<br><sup>Monthly Revenue, Jan 2017 to Aug 2018,<br> With a 6-Month Forecast</sup>"))) |>
