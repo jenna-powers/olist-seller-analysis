@@ -1,0 +1,49 @@
+.doc.card { 
+    border: none; 
+    box-shadow: none; 
+    background: transparent; 
+    flex: none !important; 
+    height: auto !important; 
+    font-size: 1.1rem;
+    line-height: 1.6;
+    min-height: 0;
+}
+.doc .card-header { 
+    background: transparent; 
+    border-bottom: none; 
+    font-size: 1.25rem; 
+    font-weight: 600; 
+    padding-bottom: 0; 
+}
+.doc .card-body { padding-top: 0.25rem; }
+.title-card { text-align: center; margin: 0;}
+.title-card .title { font-size: 2.3rem; }
+.title-card p { margin: 0.2rem 0; }
+.title-card .subtitle { font-size: 1.3rem; }
+.title-card .author { font-size: 1rem; font-style: italic; }
+.title-card .card-body { padding: 0.5rem; }
+.title-card .card-body { overflow: hidden; }
+
+.card-header { 
+    justify-content: center !important; 
+    background: transparent; 
+    border-bottom: none; 
+    text-align: center; 
+    font-size: 1.5rem; 
+    font-weight: 500; 
+}
+
+.navbar .container-fluid { position: relative; }
+.navbar-brand-container { position: absolute; left: 50%; transform: translateX(-50%); }
+
+.quarto-dashboard .bslib-value-box .value-box-value { font-size: 1.8rem !important; }
+.bslib-value-box .value-box-title { font-size: 0.9rem; }
+.bslib-value-box .value-box-showcase .bi { font-size: 2rem; }
+.bslib-value-box .value-box-area { padding: 0.5rem 1rem; }
+
+.tab-pane .h4 { 
+    width: 100%; align-self: center;
+    text-align: center; 
+    font-size: 1.5rem; 
+    font-weight: 500; 
+    margin: 0.25rem 0 0.5rem; }
